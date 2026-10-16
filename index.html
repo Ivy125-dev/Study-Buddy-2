@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CogniMate AI - Socratic Study Buddy & Smart Planner</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Progress Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            accent: '#8b5cf6',
+                            warm: '#f59e0b',
+                            emerald: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.03);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 114, 128, 0.6);
+        }
+        .chat-bubble-ai {
+            border-bottom-left-radius: 4px;
+        }
+        .chat-bubble-user {
+            border-bottom-right-radius: 4px;
+        }
+        .pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .6; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans selection:bg-brand-500 selection:text-white min-h-screen flex flex-col">
+
+    <!-- BIOMETRIC / PASSCODE SECURITY LOCK SCREEN -->
+    <div id="lock-screen" class="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl max-w-md w-full text-center relative border border-slate-200 dark:border-slate-700">
+            
+            <!-- Active Account Selector Header -->
+            <div class="mb-6 flex items-center justify-between bg-slate-100 dark:bg-slate-700/50 p-2.5 rounded-2xl">
+                <div class="flex items-center space-x-3 text-left">
+                    <div id="lock-avatar" class="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center font-bold text-lg">
+                        A
+                    </div>
+                    <div>
+                        <div id="lock-account-name" class="font-bold text-slate-800 dark:text-white text-sm">Alex Student</div>
+                        <div id="lock-account-grade" class="text-[11px] text-slate-500 dark:text-slate-400">Secondary (HK EDB DSE)</div>
+                    </div>
+                </div>
+                <button onclick="openAccountSwitchModal()" class="text-xs text-brand-600 dark:text-brand-400 font-semibold hover:underline px-2 py-1">
+                    Switch User
+                </button>
+            </div>
+
+            <div id="face-id-visualizer" class="mb-6 p-6 border-2 border-dashed border-brand-500/40 rounded-2xl bg-brand-50/50 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50 transition" onclick="simulateFaceID()">
+                <div class="relative w-24 h-24 flex items-center justify-center">
+                    <i id="face-icon" class="fa-solid fa-face-smile text-5xl text-brand-500 pulse-slow"></i>
+                    <div class="absolute inset-0 border-2 border-brand-500 rounded-xl animate-ping opacity-25"></div>
+                </div>
+                <span id="face-status-text" class="mt-3 text-xs font-semibold text-brand-600 uppercase tracking-wider">Tap to Scan Face ID</span>
+            </div>
+
+            <div class="relative my-4 flex items-center justify-center">
+                <div class="border-t border-slate-200 dark:border-slate-700 w-full"></div>
+                <span class="bg-white dark:bg-slate-800 px-3 text-xs text-slate-400 uppercase font-medium absolute">Or Enter Passcode</span>
+            </div>
+
+            <!-- PIN Input -->
+            <div class="flex justify-center space-x-3 my-4">
+                <input type="password" maxlength="1" class="pin-digit w-12 h-12 text-center text-xl font-bold rounded-xl border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none">
+                <input type="password" maxlength="1" class="pin-digit w-12 h-12 text-center text-xl font-bold rounded-xl border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none">
+                <input type="password" maxlength="1" class="pin-digit w-12 h-12 text-center text-xl font-bold rounded-xl border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none">
+                <input type="password" maxlength="1" class="pin-digit w-12 h-12 text-center text-xl font-bold rounded-xl border border-slate-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none">
+            </div>
+
+            <button onclick="unlockApp()" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-lg shadow-brand-500/25 transition active:scale-[0.98]">
+                <i class="fa-solid fa-lock-open mr-2"></i> Unlock Vault
+            </button>
+            <p id="lock-error" class="text-xs text-rose-500 mt-3 hidden"><i class="fa-solid fa-circle-exclamation mr-1"></i> Incorrect passcode or unverified biometric face profile.</p>
+
+            <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <button onclick="openCreateAccountModal()" class="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline">
+                    + Create New Student Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN NAVIGATION BAR -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-tr from-brand-600 to-brand-accent rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-extrabold bg-gradient-to-r from-brand-700 to-brand-accent bg-clip-text text-transparent">CogniMate</span>
+                        <span class="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full font-semibold ml-2">EDB & Multi-Account Edition</span>
+                    </div>
+                </div>
+
+                <!-- Desktop Nav Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <button onclick="switchTab('dashboard')" class="nav-tab active-tab px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-brand-500"></i> Dashboard
+                    </button>
+                    <button onclick="switchTab('socratic-chat')" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-comments text-brand-500"></i> Socratic Assistant
+                    </button>
+                    <button onclick="switchTab('planner')" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-check text-brand-500"></i> Eisenhower Planner
+                    </button>
+                    <button onclick="switchTab('checkpoint')" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-bullseye text-brand-500"></i> Weakness Analysis
+                    </button>
+                    <button onclick="switchTab('consultation')" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-heart text-brand-warm"></i> Buddy Consult
+                    </button>
+                </nav>
+
+                <!-- Right Header Actions -->
+                <div class="flex items-center space-x-3">
+                    <!-- Current User Switcher Button -->
+                    <button onclick="openAccountSwitchModal()" class="flex items-center space-x-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition">
+                        <div id="nav-user-avatar" class="w-6 h-6 rounded-lg bg-brand-600 text-white flex items-center justify-center text-[10px] font-bold">A</div>
+                        <span id="nav-user-name">Alex</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                    </button>
+
+                    <!-- Lock Button -->
+                    <button onclick="lockApp()" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Lock Screen">
+                        <i class="fa-solid fa-lock"></i>
+                    </button>
+
+                    <!-- Profile & Security Settings Modal Launcher -->
+                    <button onclick="openProfileSettingsModal()" class="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition" title="Account & Security Settings">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SPOTIFY / FLOCUS STYLE STUDY SOUNDSCAPE FLOATING PLAYER -->
+    <div class="bg-slate-900 text-white border-b border-slate-800 px-4 py-2.5 shadow-inner">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs">
+            <!-- Music Controls & Track Info -->
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-purple-600 flex items-center justify-center text-white text-sm shadow">
+                    <i class="fa-solid fa-music"></i>
+                </div>
+                <div>
+                    <div id="player-track-title" class="font-bold text-slate-100">Lo-Fi Study Beat #1</div>
+                    <div id="player-track-subtitle" class="text-[10px] text-slate-400">Deep Focus & Alpha Brainwaves (Royalty-Free)</div>
+                </div>
+            </div>
+
+            <!-- Player Audio Buttons -->
+            <div class="flex items-center space-x-4">
+                <button onclick="prevTrack()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-backward-step"></i></button>
+                <button id="player-play-btn" onclick="toggleAudio()" class="w-8 h-8 rounded-full bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shadow transition">
+                    <i class="fa-solid fa-play text-xs"></i>
+                </button>
+                <button onclick="nextTrack()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-forward-step"></i></button>
+
+                <!-- Sound Presets Dropdown -->
+                <select id="soundscape-select" onchange="changeSoundscape(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:outline-none">
+                    <option value="lofi">🎶 Chill Lo-Fi Beats</option>
+                    <option value="rain">🌧️ Cafe Rain Soundscape</option>
+                    <option value="waves">🌊 Deep Binaural Focus Waves</option>
+                    <option value="cafe">☕ Quiet Library Ambience</option>
+                </select>
+            </div>
+
+            <!-- Volume Slider -->
+            <div class="hidden sm:flex items-center space-x-2">
+                <i class="fa-solid fa-volume-high text-slate-400 text-xs"></i>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.5" oninput="setVolume(this.value)" class="w-20 accent-brand-500 h-1 rounded-lg cursor-pointer">
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- DASHBOARD TAB -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <!-- Greeting Banner -->
+            <div class="bg-gradient-to-r from-brand-600 via-brand-700 to-brand-accent text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
+                <div class="relative z-10 max-w-2xl">
+                    <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-medium tracking-wide uppercase">HK EDB Aligned & Evidence-Based Study Buddy</span>
+                    <h1 id="user-greeting" class="text-2xl sm:text-3xl font-bold mt-2">Hey Alex! Ready to tackle your goals today? 🚀</h1>
+                    <p class="text-brand-100 text-sm mt-2">You have 2 high-priority tasks due today and 1 practice quiz recommendation based on last week's Physics notes.</p>
+                    
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <button onclick="switchTab('planner')" class="px-4 py-2 bg-white text-brand-700 font-semibold text-sm rounded-xl hover:bg-brand-50 transition shadow-md">
+                            <i class="fa-solid fa-list-check mr-1.5"></i> Open Eisenhower Planner
+                        </button>
+                        <button onclick="switchTab('socratic-chat')" class="px-4 py-2 bg-brand-500/40 hover:bg-brand-500/60 text-white font-semibold text-sm rounded-xl transition border border-white/20">
+                            <i class="fa-solid fa-robot mr-1.5"></i> Ask Socratic Tutor
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-fire"></i>
+                        </div>
+                        <div>
+                            <div id="stat-streak" class="text-2xl font-bold text-slate-800">7 Days</div>
+                            <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Study Streak</div>
+                        </div>
+                    </div>
+                    <button onclick="openProfileSettingsModal()" class="text-xs text-brand-600 hover:underline" title="Edit or Reset Streak">Edit</button>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-brand-100 text-brand-600 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div>
+                        <div id="stat-time-saved" class="text-2xl font-bold text-slate-800">14.5 hrs</div>
+                        <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Time Saved This Week</div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-award"></i>
+                    </div>
+                    <div>
+                        <div id="stat-points" class="text-2xl font-bold text-slate-800">880 XP</div>
+                        <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Knowledge Points</div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-bullseye"></i>
+                    </div>
+                    <div>
+                        <div id="stat-accuracy" class="text-2xl font-bold text-slate-800">82%</div>
+                        <div class="text-xs font-medium text-slate-500 uppercase tracking-wider">Mastery Accuracy</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proactive Reminders & High Priority Matrix Tasks -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-bell text-brand-warm"></i> Proactive Reminders
+                        </h3>
+                        <span class="text-xs font-semibold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full">EDB Load Cap Active</span>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="p-3 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl flex items-start space-x-3">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-600 mt-1"></i>
+                            <div>
+                                <h4 class="text-xs font-bold text-amber-900">Physics Term End Exam in 4 Days</h4>
+                                <p class="text-xs text-amber-700 mt-0.5">Syllabus: Kinematics & Heat. Interleaving practice scheduled today.</p>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-blue-50 border-l-4 border-blue-500 rounded-r-xl flex items-start space-x-3">
+                            <i class="fa-solid fa-calendar-day text-blue-600 mt-1"></i>
+                            <div>
+                                <h4 class="text-xs font-bold text-blue-900">Math Calculus Homework Deadline</h4>
+                                <p class="text-xs text-blue-700 mt-0.5">Today at 18:00 PM. High priority task registered on your matrix.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-fire-flame-curated text-rose-500"></i> High Priority: "Do First" Focus List
+                        </h3>
+                        <button onclick="switchTab('planner')" class="text-xs text-brand-600 font-semibold hover:underline">View Eisenhower Matrix &rarr;</button>
+                    </div>
+
+                    <div id="dashboard-task-list" class="space-y-3">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SOCRATIC CHATBOT TAB -->
+        <section id="tab-socratic-chat" class="tab-content hidden h-[calc(100vh-180px)] flex flex-col">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white font-bold">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+                                Socratic Homework Tutor
+                                <span class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2 py-0.5 rounded-full">Dual Coding Enabled</span>
+                            </h2>
+                            <p class="text-xs text-slate-500">Guides your thinking step-by-step instead of directly giving full homework answers.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-2 text-xs">
+                        <div class="flex items-center space-x-1.5 bg-white border border-slate-300 px-3 py-1.5 rounded-xl shadow-sm">
+                            <i class="fa-solid fa-book-bookmark text-brand-600"></i>
+                            <label for="trusted-source-toggle" class="font-medium text-slate-700 cursor-pointer">Restrict to EDB Notes:</label>
+                            <input type="checkbox" id="trusted-source-toggle" checked class="w-4 h-4 text-brand-600 rounded accent-brand-600 cursor-pointer">
+                        </div>
+
+                        <button onclick="confirmClearChat()" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition" title="Clear Chat View">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="chat-messages" class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
+                    <!-- Messages dynamically appended -->
+                </div>
+
+                <div class="p-4 border-t border-slate-200 bg-white">
+                    <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex items-center gap-2">
+                        <input type="text" id="chat-input" placeholder="Ask a homework question... (e.g. 'Help me solve 3x + 5 = 20 using step-by-step questions')" class="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+
+                        <button type="submit" class="px-5 py-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                            <span>Ask</span>
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- EISENHOWER PLANNER TAB -->
+        <section id="tab-planner" class="tab-content hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Eisenhower Priority Matrix & Time Manager</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Classify tasks based on Urgency and Importance for maximum productivity.</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="openAddTaskModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-sm shadow-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Add New Task / Exam
+                    </button>
+                    <button onclick="openPomodoroModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl text-sm shadow-md transition flex items-center gap-2">
+                        <i class="fa-solid fa-stopwatch"></i> Pomodoro Timer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quadrants -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-rose-50/60 border border-rose-200 rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-rose-900 flex items-center gap-2"><span class="w-3 h-3 bg-rose-500 rounded-full"></span> Quadrant 1: Do First</h3>
+                        <span class="text-xs font-semibold bg-rose-200 text-rose-800 px-2.5 py-0.5 rounded-full">Urgent & Important</span>
+                    </div>
+                    <div id="quadrant-q1" class="space-y-3 min-h-[120px]"></div>
+                </div>
+
+                <div class="bg-brand-50/60 border border-brand-200 rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-brand-900 flex items-center gap-2"><span class="w-3 h-3 bg-brand-500 rounded-full"></span> Quadrant 2: Schedule</h3>
+                        <span class="text-xs font-semibold bg-brand-200 text-brand-800 px-2.5 py-0.5 rounded-full">Not Urgent but Important</span>
+                    </div>
+                    <div id="quadrant-q2" class="space-y-3 min-h-[120px]"></div>
+                </div>
+
+                <div class="bg-amber-50/60 border border-amber-200 rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-amber-900 flex items-center gap-2"><span class="w-3 h-3 bg-amber-500 rounded-full"></span> Quadrant 3: Quick Batch</h3>
+                        <span class="text-xs font-semibold bg-amber-200 text-amber-800 px-2.5 py-0.5 rounded-full">Urgent but Not Important</span>
+                    </div>
+                    <div id="quadrant-q3" class="space-y-3 min-h-[120px]"></div>
+                </div>
+
+                <div class="bg-slate-100 border border-slate-300 rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2"><span class="w-3 h-3 bg-slate-400 rounded-full"></span> Quadrant 4: Eliminate</h3>
+                        <span class="text-xs font-semibold bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded-full">Not Urgent & Not Important</span>
+                    </div>
+                    <div id="quadrant-q4" class="space-y-3 min-h-[120px]"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- WEAKNESS ANALYSIS TAB -->
+        <section id="tab-checkpoint" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <h2 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <i class="fa-solid fa-radar text-brand-600"></i> Identified Weak Spots
+                    </h2>
+                    <p class="text-xs text-slate-500">Tracks question mistake history to target precise weak concepts.</p>
+
+                    <div class="space-y-3">
+                        <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl">
+                            <div class="flex justify-between items-center text-xs font-bold text-rose-900">
+                                <span>Thermodynamics - Specific Heat</span>
+                                <span>45% Accuracy</span>
+                            </div>
+                            <div class="w-full bg-rose-200 h-2 rounded-full mt-2">
+                                <div class="bg-rose-600 h-2 rounded-full" style="width: 45%"></div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                            <div class="flex justify-between items-center text-xs font-bold text-amber-900">
+                                <span>Calculus - Integration Rules</span>
+                                <span>62% Accuracy</span>
+                            </div>
+                            <div class="w-full bg-amber-200 h-2 rounded-full mt-2">
+                                <div class="bg-amber-500 h-2 rounded-full" style="width: 62%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+                            <div>
+                                <span class="text-xs font-semibold uppercase text-brand-600 bg-brand-50 px-2.5 py-1 rounded-full">Targeted Checkpoint</span>
+                                <h3 class="font-bold text-slate-800 text-base mt-1">Physics: Specific Heat Capacity Practice</h3>
+                            </div>
+                        </div>
+
+                        <div id="quiz-container" class="space-y-4">
+                            <p class="text-sm font-semibold text-slate-800 leading-relaxed">
+                                Question: A 2kg block absorbs 4200 J of heat, rising by 5°C. What is the specific heat capacity?
+                            </p>
+                            <div class="space-y-2">
+                                <button onclick="selectQuizOpt(this, false)" class="quiz-opt w-full text-left p-3.5 rounded-xl border border-slate-200 text-xs font-medium hover:bg-slate-50">A) 2100 J/(kg °C)</button>
+                                <button onclick="selectQuizOpt(this, true)" class="quiz-opt w-full text-left p-3.5 rounded-xl border border-slate-200 text-xs font-medium hover:bg-slate-50">B) 420 J/(kg °C)</button>
+                                <button onclick="selectQuizOpt(this, false)" class="quiz-opt w-full text-left p-3.5 rounded-xl border border-slate-200 text-xs font-medium hover:bg-slate-50">C) 840 J/(kg °C)</button>
+                            </div>
+                            <div id="quiz-res" class="hidden p-3 rounded-xl text-xs font-medium"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BUDDY CONSULTATION TAB -->
+        <section id="tab-consultation" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-gradient-to-br from-amber-500/10 via-brand-500/10 to-purple-500/10 p-6 rounded-2xl border border-amber-200/60 shadow-sm space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center text-xl shadow-md">
+                            <i class="fa-solid fa-face-smile-beam"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base">Weekly Soft Consult</h3>
+                            <p class="text-xs text-slate-600">Warm study buddy chat to relieve exam pressure.</p>
+                        </div>
+                    </div>
+
+                    <div id="consult-chat-box" class="bg-white p-4 rounded-xl border border-slate-200 text-xs space-y-3 leading-relaxed">
+                        <p class="font-semibold text-amber-800">"Hey! 👋 You worked super hard this week!"</p>
+                        <p class="text-slate-700">How are you feeling overall about your study load?</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <textarea id="consult-comment" placeholder="Add a comment on how you feel..." class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none" rows="3"></textarea>
+                        <button onclick="submitConsultation()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-md transition">
+                            Submit Check-In
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <h3 class="font-bold text-slate-800 text-base">Progress & Growth Analytics</h3>
+                    <div class="h-64 w-full">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MULTI-ACCOUNT SWITCHER MODAL -->
+    <div id="account-switch-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base">Switch Student Account</h3>
+                <button onclick="closeAccountSwitchModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            </div>
+
+            <div id="account-list-container" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- Rendered Dynamically -->
+            </div>
+
+            <button onclick="openCreateAccountModal()" class="w-full py-2.5 border-2 border-dashed border-brand-500 text-brand-600 font-bold rounded-xl text-xs hover:bg-brand-50 transition">
+                + Add / Create New Account
+            </button>
+        </div>
+    </div>
+
+    <!-- CREATE ACCOUNT MODAL -->
+    <div id="create-account-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base">Create New Student Profile</h3>
+                <button onclick="closeCreateAccountModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            </div>
+
+            <form onsubmit="handleCreateAccount(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Student Name</label>
+                    <input type="text" id="new-account-name" required placeholder="e.g. Jordan Lee" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Education Level</label>
+                    <select id="new-account-grade" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                        <option value="Secondary (HK EDB DSE)">Secondary (Hong Kong Local DSE)</option>
+                        <option value="Secondary (International IB)">Secondary (International IB/IGCSE)</option>
+                        <option value="Primary School">Primary School</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Set 4-Digit PIN</label>
+                        <input type="password" maxlength="4" id="new-account-pin" required placeholder="1234" class="w-full p-2.5 border border-slate-200 rounded-xl text-center font-mono font-bold tracking-widest outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Avatar Color</label>
+                        <select id="new-account-color" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                            <option value="bg-brand-600">Blue</option>
+                            <option value="bg-purple-600">Purple</option>
+                            <option value="bg-emerald-600">Green</option>
+                            <option value="bg-amber-600">Amber</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-brand-50 border border-brand-200 rounded-xl">
+                    <span class="font-bold text-brand-800">Biometric Setup:</span>
+                    <p class="text-brand-700 text-[11px] mt-0.5">Custom Face ID signature will be registered upon account creation.</p>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl shadow-md">
+                    Create Profile & Switch Now
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PROFILE & SECURITY SETTINGS MODAL -->
+    <div id="profile-settings-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-user-gear text-brand-600"></i> Account & Security Settings
+                </h3>
+                <button onclick="closeProfileSettingsModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            </div>
+
+            <!-- Profile Info Edit -->
+            <div class="space-y-3 text-xs border-b border-slate-100 pb-4">
+                <h4 class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Profile Details</h4>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Edit Display Name</label>
+                    <input type="text" id="edit-profile-name" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Education Syllabus Level</label>
+                    <select id="edit-profile-grade" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                        <option value="Secondary (HK EDB DSE)">Secondary (Hong Kong Local DSE)</option>
+                        <option value="Secondary (International IB)">Secondary (International IB/IGCSE)</option>
+                        <option value="Primary School">Primary School</option>
+                    </select>
+                </div>
+                <button onclick="saveProfileDetails()" class="px-4 py-2 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900">
+                    Update Profile Details
+                </button>
+            </div>
+
+            <!-- Security & Passcode Change -->
+            <div class="space-y-3 text-xs border-b border-slate-100 pb-4">
+                <h4 class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Security & Passcode</h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Current Passcode</label>
+                        <input type="password" maxlength="4" id="pass-current" placeholder="****" class="w-full p-2.5 border border-slate-200 rounded-xl text-center font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">New 4-Digit Passcode</label>
+                        <input type="password" maxlength="4" id="pass-new" placeholder="****" class="w-full p-2.5 border border-slate-200 rounded-xl text-center font-mono">
+                    </div>
+                </div>
+                <button onclick="changePasscode()" class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700">
+                    Change Security Passcode
+                </button>
+            </div>
+
+            <!-- Biometric Face ID Re-Enrollment -->
+            <div class="space-y-3 text-xs border-b border-slate-100 pb-4">
+                <h4 class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Biometrics</h4>
+                <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div>
+                        <div class="font-bold text-slate-800">Face ID Profile</div>
+                        <div class="text-[11px] text-slate-500">Re-scan or update your facial profile key.</div>
+                    </div>
+                    <button onclick="reEnrollFaceID()" class="px-3 py-1.5 bg-brand-100 text-brand-700 font-bold rounded-lg hover:bg-brand-200">
+                        Re-Enroll Face ID
+                    </button>
+                </div>
+            </div>
+
+            <!-- Streak & Data Controls -->
+            <div class="space-y-3 text-xs">
+                <h4 class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Streak & Data Reset</h4>
+                
+                <div class="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div>
+                        <div class="font-bold text-amber-900">Study Days Streak</div>
+                        <div id="settings-streak-label" class="text-[11px] text-amber-700">Current Streak: 7 Days</div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="resetStreak()" class="px-2.5 py-1 bg-amber-600 text-white font-bold rounded-lg">Reset to 0</button>
+                        <button onclick="setStreakValue()" class="px-2.5 py-1 border border-amber-400 text-amber-800 font-bold rounded-lg">Custom</button>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+                    <div class="font-bold text-rose-900">Account Reset Options</div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="resetChatHistory()" class="px-2.5 py-1 bg-white border border-rose-300 text-rose-700 rounded-lg hover:bg-rose-100">Clear Chat History</button>
+                        <button onclick="resetTaskMatrix()" class="px-2.5 py-1 bg-white border border-rose-300 text-rose-700 rounded-lg hover:bg-rose-100">Clear Tasks Matrix</button>
+                        <button onclick="fullAccountReset()" class="px-2.5 py-1 bg-rose-600 text-white font-bold rounded-lg hover:bg-rose-700">Factory Reset Account</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POMODORO TIMER MODAL -->
+    <div id="pomodoro-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-6 shadow-2xl relative">
+            <button onclick="closePomodoroModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            <div class="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-slate-800">Interleaving Pomodoro Timer</h3>
+                <p class="text-xs text-slate-500 mt-1">25 min Focus • 5 min Rest</p>
+            </div>
+
+            <div class="text-5xl font-mono font-bold text-purple-700 py-4 bg-purple-50 rounded-2xl border border-purple-100">
+                <span id="pomo-timer">25:00</span>
+            </div>
+
+            <div class="flex justify-center space-x-3">
+                <button id="pomo-start-btn" onclick="togglePomodoro()" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl text-xs shadow-md">
+                    Start Session
+                </button>
+                <button onclick="resetPomodoro()" class="px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-xl text-xs hover:bg-slate-50">
+                    Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD TASK MODAL -->
+    <div id="add-task-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-slate-800 text-base">Add New Task or Exam</h3>
+                <button onclick="closeAddTaskModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+            </div>
+
+            <form onsubmit="handleAddTaskSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Task Description</label>
+                    <input type="text" id="task-title-input" required placeholder="e.g. Physics Ch 4 Thermodynamics Practice" class="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Category Label</label>
+                        <select id="task-category-input" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                            <option value="Quiz">Quiz</option>
+                            <option value="Chapter Test">Chapter Test</option>
+                            <option value="Term End">Term End Exam</option>
+                            <option value="Homework">Homework</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Eisenhower Quadrant</label>
+                        <select id="task-quadrant-input" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                            <option value="q1">Q1: Urgent & Important</option>
+                            <option value="q2">Q2: Schedule</option>
+                            <option value="q3">Q3: Quick Batch</option>
+                            <option value="q4">Q4: Eliminate</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Due Date</label>
+                    <input type="date" id="task-date-input" required class="w-full p-2.5 border border-slate-200 rounded-xl">
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs shadow-md mt-2">
+                    Add to Matrix
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- CORE JAVASCRIPT APPLICATION LOGIC -->
+    <script>
+        // Multi-Account System & Database State
+        const DEFAULT_ACCOUNTS = [
+            {
+                id: "acc_default",
+                name: "Alex Student",
+                grade: "Secondary (HK EDB DSE)",
+                pin: "1234",
+                avatarBg: "bg-brand-600",
+                streak: 7,
+                timeSaved: "14.5 hrs",
+                points: 880,
+                accuracy: "82%",
+                faceRegistered: true,
+                tasks: [
+                    { id: 1, title: "Physics Term-End Exam Preparation", category: "Term End", quadrant: "q1", date: "2026-10-20", done: false },
+                    { id: 2, title: "Calculus Homework Exercises Ch 5", category: "Homework", quadrant: "q1", date: "2026-10-16", done: false },
+                    { id: 3, title: "English Essay Interleaving Review", category: "Chapter Test", quadrant: "q2", date: "2026-10-22", done: false }
+                ],
+                chatHistory: [
+                    { role: "assistant", content: "Hey Alex! I'm your CogniMate Socratic Tutor. What homework topic are we working on today?" }
+                ]
+            }
+        ];
+
+        let accounts = [];
+        let currentAccountId = "acc_default";
+        let isUnlocked = false;
+
+        // Audio Player State
+        let audioPlaying = false;
+        let currentAudioTrack = 0;
+        let audioContext;
+        let oscillator;
+
+        // App Initialization
+        window.onload = function() {
+            loadAllAccounts();
+            setupLockScreenUser();
+            setupPinInputs();
+            renderActiveUserDashboard();
+            initProgressChart();
+        };
+
+        function loadAllAccounts() {
+            const saved = localStorage.getItem('cognimate_accounts_v2');
+            if (saved) {
+                try {
+                    accounts = JSON.parse(saved);
+                } catch(e) { accounts = DEFAULT_ACCOUNTS; }
+            } else {
+                accounts = DEFAULT_ACCOUNTS;
+                saveAccountsToStorage();
+            }
+
+            const activeId = localStorage.getItem('cognimate_active_acc');
+            if (activeId && accounts.some(a => a.id === activeId)) {
+                currentAccountId = activeId;
+            } else {
+                currentAccountId = accounts[0].id;
+            }
+        }
+
+        function saveAccountsToStorage() {
+            localStorage.setItem('cognimate_accounts_v2', JSON.stringify(accounts));
+            localStorage.setItem('cognimate_active_acc', currentAccountId);
+        }
+
+        function getCurrentAccount() {
+            return accounts.find(a => a.id === currentAccountId) || accounts[0];
+        }
+
+        // Lock Screen & Biometric Handlers
+        function setupLockScreenUser() {
+            const acc = getCurrentAccount();
+            document.getElementById('lock-account-name').innerText = acc.name;
+            document.getElementById('lock-account-grade').innerText = acc.grade;
+            document.getElementById('lock-avatar').innerText = acc.name.charAt(0).toUpperCase();
+            document.getElementById('lock-avatar').className = `w-10 h-10 rounded-xl ${acc.avatarBg} text-white flex items-center justify-center font-bold text-lg`;
+            document.getElementById('lock-error').classList.add('hidden');
+        }
+
+        function setupPinInputs() {
+            const digits = document.querySelectorAll('.pin-digit');
+            digits.forEach((input, index) => {
+                input.value = '';
+                input.addEventListener('input', (e) => {
+                    if (e.target.value && index < digits.length - 1) {
+                        digits[index + 1].focus();
+                    }
+                    checkPinAuto();
+                });
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                        digits[index - 1].focus();
+                    }
+                });
+            });
+        }
+
+        function checkPinAuto() {
+            const digits = document.querySelectorAll('.pin-digit');
+            let entered = Array.from(digits).map(d => d.value).join('');
+            if (entered.length === 4) {
+                const acc = getCurrentAccount();
+                if (entered === acc.pin) {
+                    unlockApp();
+                } else {
+                    document.getElementById('lock-error').classList.remove('hidden');
+                }
+            }
+        }
+
+        function simulateFaceID() {
+            const acc = getCurrentAccount();
+            const icon = document.getElementById('face-icon');
+            const statusText = document.getElementById('face-status-text');
+
+            icon.className = "fa-solid fa-circle-notch fa-spin text-5xl text-brand-500";
+            statusText.innerText = "Scanning Biometric Profile...";
+
+            setTimeout(() => {
+                if (acc.faceRegistered) {
+                    icon.className = "fa-solid fa-circle-check text-5xl text-emerald-500";
+                    statusText.innerText = "Face ID Verified!";
+                    setTimeout(() => unlockApp(), 500);
+                } else {
+                    icon.className = "fa-solid fa-circle-xmark text-5xl text-rose-500";
+                    statusText.innerText = "Face ID Unrecognized";
+                    document.getElementById('lock-error').classList.remove('hidden');
+                }
+            }, 900);
+        }
+
+        function unlockApp() {
+            const lock = document.getElementById('lock-screen');
+            lock.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                lock.style.display = 'none';
+            }, 300);
+            isUnlocked = true;
+            renderActiveUserDashboard();
+        }
+
+        function lockApp() {
+            setupLockScreenUser();
+            setupPinInputs();
+            const lock = document.getElementById('lock-screen');
+            lock.style.display = 'flex';
+            setTimeout(() => {
+                lock.classList.remove('opacity-0', 'pointer-events-none');
+            }, 10);
+            isUnlocked = false;
+        }
+
+        // Render Active User State
+        function renderActiveUserDashboard() {
+            const acc = getCurrentAccount();
+            document.getElementById('user-greeting').innerText = `Hey ${acc.name}! Ready to tackle your goals today? 🚀`;
+            document.getElementById('nav-user-name').innerText = acc.name;
+            document.getElementById('nav-user-avatar').innerText = acc.name.charAt(0).toUpperCase();
+            document.getElementById('nav-user-avatar').className = `w-6 h-6 rounded-lg ${acc.avatarBg} text-white flex items-center justify-center text-[10px] font-bold`;
+
+            document.getElementById('stat-streak').innerText = `${acc.streak} Days`;
+            document.getElementById('stat-time-saved').innerText = acc.timeSaved;
+            document.getElementById('stat-points').innerText = `${acc.points} XP`;
+            document.getElementById('stat-accuracy').innerText = acc.accuracy;
+
+            renderTasks();
+            renderChatHistory();
+        }
+
+        // Multi-Account Switcher & Creation Modal Handlers
+        function openAccountSwitchModal() {
+            const container = document.getElementById('account-list-container');
+            container.innerHTML = accounts.map(a => `
+                <div onclick="switchUserAccount('${a.id}')" class="p-3 rounded-2xl border ${a.id === currentAccountId ? 'border-brand-500 bg-brand-50/50' : 'border-slate-200 hover:bg-slate-50'} flex items-center justify-between cursor-pointer transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-xl ${a.avatarBg} text-white flex items-center justify-center font-bold text-xs">
+                            ${a.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-800 text-xs">${escapeHtml(a.name)}</div>
+                            <div class="text-[10px] text-slate-500">${a.grade}</div>
+                        </div>
+                    </div>
+                    ${a.id === currentAccountId ? '<span class="text-xs font-bold text-brand-600"><i class="fa-solid fa-circle-check"></i> Active</span>' : ''}
+                </div>
+            `).join('');
+
+            document.getElementById('account-switch-modal').classList.remove('hidden');
+        }
+
+        function closeAccountSwitchModal() {
+            document.getElementById('account-switch-modal').classList.add('hidden');
+        }
+
+        function switchUserAccount(accId) {
+            currentAccountId = accId;
+            saveAccountsToStorage();
+            closeAccountSwitchModal();
+            lockApp();
+        }
+
+        function openCreateAccountModal() {
+            closeAccountSwitchModal();
+            document.getElementById('create-account-modal').classList.remove('hidden');
+        }
+
+        function closeCreateAccountModal() {
+            document.getElementById('create-account-modal').classList.add('hidden');
+        }
+
+        function handleCreateAccount(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-account-name').value;
+            const grade = document.getElementById('new-account-grade').value;
+            const pin = document.getElementById('new-account-pin').value;
+            const color = document.getElementById('new-account-color').value;
+
+            const newAcc = {
+                id: 'acc_' + Date.now(),
+                name,
+                grade,
+                pin: pin || "1234",
+                avatarBg: color,
+                streak: 1,
+                timeSaved: "0.0 hrs",
+                points: 100,
+                accuracy: "100%",
+                faceRegistered: true,
+                tasks: [],
+                chatHistory: [
+                    { role: "assistant", content: `Welcome ${name}! I'm your CogniMate Socratic Tutor. What topic are we studying today?` }
+                ]
+            };
+
+            accounts.push(newAcc);
+            currentAccountId = newAcc.id;
+            saveAccountsToStorage();
+
+            closeCreateAccountModal();
+            e.target.reset();
+            lockApp();
+        }
+
+        // Profile & Security Settings Handlers
+        function openProfileSettingsModal() {
+            const acc = getCurrentAccount();
+            document.getElementById('edit-profile-name').value = acc.name;
+            document.getElementById('edit-profile-grade').value = acc.grade;
+            document.getElementById('settings-streak-label').innerText = `Current Streak: ${acc.streak} Days`;
+            document.getElementById('profile-settings-modal').classList.remove('hidden');
+        }
+
+        function closeProfileSettingsModal() {
+            document.getElementById('profile-settings-modal').classList.add('hidden');
+        }
+
+        function saveProfileDetails() {
+            const acc = getCurrentAccount();
+            acc.name = document.getElementById('edit-profile-name').value;
+            acc.grade = document.getElementById('edit-profile-grade').value;
+            saveAccountsToStorage();
+            renderActiveUserDashboard();
+            alert("Profile details updated!");
+        }
+
+        function changePasscode() {
+            const acc = getCurrentAccount();
+            const curr = document.getElementById('pass-current').value;
+            const newPin = document.getElementById('pass-new').value;
+
+            if (curr !== acc.pin) {
+                alert("Current passcode does not match!");
+                return;
+            }
+            if (newPin.length !== 4) {
+                alert("New passcode must be 4 digits!");
+                return;
+            }
+
+            acc.pin = newPin;
+            saveAccountsToStorage();
+            document.getElementById('pass-current').value = '';
+            document.getElementById('pass-new').value = '';
+            alert("Security passcode changed successfully!");
+        }
+
+        function reEnrollFaceID() {
+            const acc = getCurrentAccount();
+            acc.faceRegistered = true;
+            saveAccountsToStorage();
+            alert("Face ID biometric signature re-enrolled for " + acc.name);
+        }
+
+        function resetStreak() {
+            const acc = getCurrentAccount();
+            acc.streak = 0;
+            saveAccountsToStorage();
+            renderActiveUserDashboard();
+            document.getElementById('settings-streak-label').innerText = "Current Streak: 0 Days";
+        }
+
+        function setStreakValue() {
+            const val = prompt("Enter new streak days:", "7");
+            if (val !== null && !isNaN(val)) {
+                const acc = getCurrentAccount();
+                acc.streak = parseInt(val);
+                saveAccountsToStorage();
+                renderActiveUserDashboard();
+                document.getElementById('settings-streak-label').innerText = `Current Streak: ${acc.streak} Days`;
+            }
+        }
+
+        function resetChatHistory() {
+            const acc = getCurrentAccount();
+            acc.chatHistory = [
+                { role: "assistant", content: `Chat history cleared for ${acc.name}. How can I help you today?` }
+            ];
+            saveAccountsToStorage();
+            renderChatHistory();
+            alert("Chat history reset.");
+        }
+
+        function resetTaskMatrix() {
+            const acc = getCurrentAccount();
+            acc.tasks = [];
+            saveAccountsToStorage();
+            renderTasks();
+            alert("Task matrix reset.");
+        }
+
+        function fullAccountReset() {
+            if (confirm("Are you sure you want to factory reset this account? All streak and study data will be cleared.")) {
+                const acc = getCurrentAccount();
+                acc.streak = 0;
+                acc.tasks = [];
+                acc.chatHistory = [];
+                saveAccountsToStorage();
+                renderActiveUserDashboard();
+                closeProfileSettingsModal();
+                alert("Account reset complete.");
+            }
+        }
+
+        // Eisenhower Tasks Logic
+        function renderTasks() {
+            const acc = getCurrentAccount();
+            const q1 = document.getElementById('quadrant-q1');
+            const q2 = document.getElementById('quadrant-q2');
+            const q3 = document.getElementById('quadrant-q3');
+            const q4 = document.getElementById('quadrant-q4');
+            const dash = document.getElementById('dashboard-task-list');
+
+            q1.innerHTML = ''; q2.innerHTML = ''; q3.innerHTML = ''; q4.innerHTML = ''; dash.innerHTML = '';
+
+            acc.tasks.forEach(task => {
+                const card = createTaskCard(task);
+                if (task.quadrant === 'q1') q1.appendChild(card);
+                else if (task.quadrant === 'q2') q2.appendChild(card);
+                else if (task.quadrant === 'q3') q3.appendChild(card);
+                else if (task.quadrant === 'q4') q4.appendChild(card);
+
+                if (task.quadrant === 'q1' && !task.done) {
+                    dash.appendChild(card.cloneNode(true));
+                }
+            });
+
+            if (dash.children.length === 0) {
+                dash.innerHTML = `<p class="text-xs text-slate-400 italic">No urgent tasks due right now! 🎉</p>`;
+            }
+        }
+
+        function createTaskCard(task) {
+            const div = document.createElement('div');
+            div.className = `p-3 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center justify-between text-xs ${task.done ? 'opacity-50 line-through' : ''}`;
+            div.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" ${task.done ? 'checked' : ''} onclick="toggleTask(${task.id})" class="w-4 h-4 text-brand-600 rounded cursor-pointer">
+                    <div>
+                        <div class="font-bold text-slate-800">${escapeHtml(task.title)}</div>
+                        <div class="text-[10px] text-slate-400"><i class="fa-solid fa-clock mr-1"></i>${task.date}</div>
+                    </div>
+                </div>
+                <button onclick="deleteTask(${task.id})" class="text-slate-300 hover:text-rose-500"><i class="fa-solid fa-xmark"></i></button>
+            `;
+            return div;
+        }
+
+        function toggleTask(id) {
+            const acc = getCurrentAccount();
+            const t = acc.tasks.find(x => x.id === id);
+            if (t) {
+                t.done = !t.done;
+                saveAccountsToStorage();
+                renderTasks();
+            }
+        }
+
+        function deleteTask(id) {
+            const acc = getCurrentAccount();
+            acc.tasks = acc.tasks.filter(x => x.id !== id);
+            saveAccountsToStorage();
+            renderTasks();
+        }
+
+        function openAddTaskModal() { document.getElementById('add-task-modal').classList.remove('hidden'); }
+        function closeAddTaskModal() { document.getElementById('add-task-modal').classList.add('hidden'); }
+
+        function handleAddTaskSubmit(e) {
+            e.preventDefault();
+            const acc = getCurrentAccount();
+            acc.tasks.push({
+                id: Date.now(),
+                title: document.getElementById('task-title-input').value,
+                category: document.getElementById('task-category-input').value,
+                quadrant: document.getElementById('task-quadrant-input').value,
+                date: document.getElementById('task-date-input').value,
+                done: false
+            });
+            saveAccountsToStorage();
+            renderTasks();
+            closeAddTaskModal();
+            e.target.reset();
+        }
+
+        // Socratic Chat Engine
+        function renderChatHistory() {
+            const acc = getCurrentAccount();
+            const box = document.getElementById('chat-messages');
+            box.innerHTML = '';
+            acc.chatHistory.forEach(m => appendChatMessageUI(m.role, m.content));
+        }
+
+        function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const acc = getCurrentAccount();
+            acc.chatHistory.push({ role: "user", content: text });
+            appendChatMessageUI('user', text);
+            input.value = '';
+
+            setTimeout(() => {
+                const resp = generateSocraticResponse(text);
+                acc.chatHistory.push({ role: "assistant", content: resp });
+                saveAccountsToStorage();
+                appendChatMessageUI('assistant', resp);
+            }, 800);
+        }
+
+        function generateSocraticResponse(query) {
+            const lower = query.toLowerCase();
+            if (lower.includes('heat') || lower.includes('physics')) {
+                return "Great physics question! Let's think step-by-step: when heat energy is added to a substance, which parameter determines how much its temperature changes per kilogram?";
+            } else if (lower.includes('calculus') || lower.includes('3x')) {
+                return "Let's isolate x together. In 3x + 5 = 20, what operation should we apply to both sides first to remove +5?";
+            } else {
+                return `That's an insightful topic! Before looking at formulas, what key concept from your textbook section applies to "${query}"?`;
+            }
+        }
+
+        function appendChatMessageUI(role, content) {
+            const box = document.getElementById('chat-messages');
+            const isUser = role === 'user';
+            const div = document.createElement('div');
+            div.className = `flex items-start space-x-3 ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`;
+            div.innerHTML = `
+                <div class="w-8 h-8 rounded-full ${isUser ? 'bg-slate-700' : 'bg-brand-600'} text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    ${isUser ? 'You' : 'AI'}
+                </div>
+                <div class="${isUser ? 'bg-brand-600 text-white chat-bubble-user' : 'bg-slate-100 text-slate-800 chat-bubble-ai'} p-4 rounded-2xl max-w-2xl text-sm leading-relaxed shadow-sm">
+                    ${escapeHtml(content)}
+                </div>
+            `;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function confirmClearChat() {
+            if (confirm("Clear active chat conversation?")) {
+                resetChatHistory();
+            }
+        }
+
+        // Spotify / Flocus Soundscape Audio Player
+        function toggleAudio() {
+            const btn = document.getElementById('player-play-btn');
+            if (audioPlaying) {
+                audioPlaying = false;
+                btn.innerHTML = '<i class="fa-solid fa-play text-xs"></i>';
+            } else {
+                audioPlaying = true;
+                btn.innerHTML = '<i class="fa-solid fa-pause text-xs"></i>';
+                playAmbientTone();
+            }
+        }
+
+        function playAmbientTone() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function changeSoundscape(val) {
+            const titles = {
+                lofi: ["Lo-Fi Study Beat #1", "Deep Focus & Alpha Brainwaves"],
+                rain: ["Cafe Rain Soundscape", "Calm Ambient Water Beats"],
+                waves: ["Binaural Focus Waves", "432Hz Cognitive Clarity"],
+                cafe: ["Quiet Library Ambience", "Soft Background Murmur"]
+            };
+            if (titles[val]) {
+                document.getElementById('player-track-title').innerText = titles[val][0];
+                document.getElementById('player-track-subtitle').innerText = titles[val][1];
+            }
+        }
+
+        function nextTrack() { changeSoundscape('lofi'); }
+        function prevTrack() { changeSoundscape('waves'); }
+        function setVolume(v) {}
+
+        // Pomodoro Timer Logic
+        let pomoInterval;
+        let pomoTime = 25 * 60;
+        let pomoRunning = false;
+
+        function openPomodoroModal() { document.getElementById('pomodoro-modal').classList.remove('hidden'); }
+        function closePomodoroModal() { document.getElementById('pomodoro-modal').classList.add('hidden'); }
+
+        function togglePomodoro() {
+            const btn = document.getElementById('pomo-start-btn');
+            if (pomoRunning) {
+                clearInterval(pomoInterval);
+                pomoRunning = false;
+                btn.innerText = "Resume Session";
+            } else {
+                pomoRunning = true;
+                btn.innerText = "Pause Session";
+                pomoInterval = setInterval(() => {
+                    pomoTime--;
+                    const mins = Math.floor(pomoTime / 60);
+                    const secs = pomoTime % 60;
+                    document.getElementById('pomo-timer').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    if (pomoTime <= 0) {
+                        clearInterval(pomoInterval);
+                        alert("Pomodoro session completed! Take a 5 min break.");
+                        resetPomodoro();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetPomodoro() {
+            clearInterval(pomoInterval);
+            pomoTime = 25 * 60;
+            pomoRunning = false;
+            document.getElementById('pomo-timer').innerText = "25:00";
+            document.getElementById('pomo-start-btn').innerText = "Start Session";
+        }
+
+        // Quiz Selection Logic
+        function selectQuizOpt(btn, correct) {
+            document.querySelectorAll('.quiz-opt').forEach(b => b.classList.remove('border-brand-600', 'bg-brand-50'));
+            btn.classList.add('border-brand-600', 'bg-brand-50');
+            const res = document.getElementById('quiz-res');
+            res.classList.remove('hidden');
+            if (correct) {
+                res.className = "p-3 rounded-xl text-xs font-medium bg-emerald-100 text-emerald-900 border border-emerald-200 mt-2";
+                res.innerHTML = "<i class='fa-solid fa-circle-check text-emerald-600 mr-1'></i> Correct! Specific Heat Capacity = 420 J/(kg °C). +50 XP awarded!";
+            } else {
+                res.className = "p-3 rounded-xl text-xs font-medium bg-rose-100 text-rose-900 border border-rose-200 mt-2";
+                res.innerHTML = "Incorrect. Try recalculating using Q = m × c × ΔT.";
+            }
+        }
+
+        function submitConsultation() {
+            const txt = document.getElementById('consult-comment').value;
+            const box = document.getElementById('consult-chat-box');
+            if (txt) {
+                box.innerHTML += `<p class='italic text-slate-600 mt-2'>"${escapeHtml(txt)}"</p>`;
+                box.innerHTML += `<p class='font-semibold text-emerald-700 mt-2'>CogniMate: "Thanks for sharing! We will balance your schedule next week."</p>`;
+                document.getElementById('consult-comment').value = '';
+            }
+        }
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+        }
+
+        // Chart.js Progress Chart
+        function initProgressChart() {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Mastery Accuracy (%)',
+                        data: [62, 70, 78, 85],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+    </script>
+</body>
+</html>
